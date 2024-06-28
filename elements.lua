@@ -43,26 +43,12 @@ function Ball:collides(paddle)
 end
 
 function Ball:bounceOff(paddle)
-  -- | |     x/ball > x/paddle
-  -- | |[]
-  --
-  -- for the left player horizontal overlay will be negative
-  --
-  -- []| |   x/ball < x/paddle
-  --   | |
-  --
-  -- for the right player horizontal overlay will be positive
   local horizontalOverlay = paddle.x + 0.5 * paddle.width - (self.x + 0.5 * self.width)
-  -- local verticalOverlay = paddle.y + 0.5 * paddle.height - (self.y + 0.5 * self.height)
 
   self.x = self.x - horizontalOverlay
   self.dx = -self.dx
-  -- else
-  --   self.y = self.y - verticalOverlay
-  --   self.dy = -self.dy
-  -- end
 
-  love.window.setTitle(tostring(horizontalOverlay)..' '..tostring(paddle.x - self.x)..' '..tostring(self:collides(paddle)))
+  gSounds['paddleHit']:play()
 end
 
 function Ball:update(dt)

@@ -67,6 +67,12 @@ function love.load()
     vsync = true,
     canvas = false
   })
+
+  gSounds = {
+    paddleHit = love.audio.newSource('sounds/paddle_hit.wav', 'static'),
+    score = love.audio.newSource('sounds/score.wav', 'static'),
+    wallHit = love.audio.newSource('sounds/wall_hit.wav', 'static'),
+  }
 end
 
 function love.keypressed(key)
@@ -101,6 +107,7 @@ function love.update(dt)
     -- check ball and edges collision
     if ball.y < 0 or ball.y > VIRTUAL_HEIGHT - ball.height then
       ball.dy = -ball.dy
+      gSounds['wallHit']:play()
     elseif ball.x < 0 then
       game.score2 = game.score2 + 1
       game.winningPlayer = 2
@@ -109,6 +116,8 @@ function love.update(dt)
       else
         game.state = 'serve'
       end
+
+      gSounds['score']:play()
     elseif ball.x > VIRTUAL_WIDTH - ball.width then
       game.score1 = game.score1 + 1
       game.winningPlayer = 1
@@ -117,6 +126,8 @@ function love.update(dt)
       else
         game.state = 'serve'
       end
+
+      gSounds['score']:play()
     end
 
     -- handle player1 input
