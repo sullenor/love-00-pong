@@ -1,6 +1,7 @@
 Class = require 'class'
 push = require 'push'
-require 'elements'
+require 'Paddle'
+require 'Ball'
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
@@ -9,37 +10,39 @@ VIRTUAL_WIDTH = 432
 VIRTUAL_HEIGHT = 243
 
 PADDLE_SPEED = 200
+PADDLE_SPEED_FOR_AI = 100
+
+AI_DECISION_TIMER = 0
 
 game = {
   -- serve (waiting on a key press to start the game)
   -- play (the ball is in play)
   -- done (the game is over, with a victor)
-  state = 'serve',
-  score1 = 0,
-  score2 = 0,
-  winningPlayer = 0
+  ['state'] = 'serve',
+  ['score1'] = 0,
+  ['score2'] = 0,
+  ['winningPlayer'] = 0
 }
 
-event = {}
-function event.action()
-  if game.state == 'serve' then
-    ball:reset(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, game.winningPlayer)
-    game.state = 'play'
-  elseif game.state == 'done' then
-    ball:reset(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, game.winningPlayer)
-    game.score1 = 0
-    game.score2 = 0
-    game.winningPlayer = 0
-    game.state = 'serve'
-  end
-end
-function event.exit()
-  if game.state == 'serve' or game.state == 'done' then
-    love.event.quit()
-  end
-end
-function event.moveUp(player) end
-function event.moveDown(player) end
+event = {
+  ['action'] = function ()
+    if game.state == 'serve' then
+      ball:reset(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, game.winningPlayer)
+      game.state = 'play'
+    elseif game.state == 'done' then
+      ball:reset(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, game.winningPlayer)
+      game.score1 = 0
+      game.score2 = 0
+      game.winningPlayer = 0
+      game.state = 'serve'
+    end
+  end,
+  ['exit'] = function ()
+    if game.state == 'serve' or game.state == 'done' then
+      love.event.quit()
+    end
+  end,
+}
 
 function love.load()
   love.graphics.setDefaultFilter('nearest', 'nearest')
@@ -69,9 +72,9 @@ function love.load()
   })
 
   gSounds = {
-    paddleHit = love.audio.newSource('sounds/paddle_hit.wav', 'static'),
-    score = love.audio.newSource('sounds/score.wav', 'static'),
-    wallHit = love.audio.newSource('sounds/wall_hit.wav', 'static'),
+    ['paddleHit'] = love.audio.newSource('sounds/paddle_hit.wav', 'static'),
+    ['score'] = love.audio.newSource('sounds/score.wav', 'static'),
+    ['wallHit'] = love.audio.newSource('sounds/wall_hit.wav', 'static'),
   }
 end
 
@@ -80,30 +83,26 @@ function love.keypressed(key)
     event.exit()
   elseif key == 'enter' or key == 'return' then
     event.action()
-  elseif key == 'w' then
-    event.moveUp(1)
-  elseif key == 's' then
-    event.moveDown(2)
-  elseif key == 'up' or key == 'p' then
-    event.moveUp(1)
-  elseif key == 'down' or key == ';' then
-    event.moveDown(2)
   end
 end
 
 function love.update(dt)
   -- while in play, update elements position
   if game.state == 'play' then
+    -- update ai timer
+    AI_DECISION_TIMER = AI_DECISION_TIMER + dt
     -- update elements position
     ball:update(dt)
     paddle1:update(dt, VIRTUAL_HEIGHT)
     paddle2:update(dt, VIRTUAL_HEIGHT)
+
     -- check ball and paddle collision
     if ball:collides(paddle1) then
       ball:bounceOff(paddle1)
     elseif ball:collides(paddle2) then
       ball:bounceOff(paddle2)
     end
+
     -- check ball and edges collision
     if ball.y < 0 or ball.y > VIRTUAL_HEIGHT - ball.height then
       ball.dy = -ball.dy
@@ -131,20 +130,37 @@ function love.update(dt)
     end
 
     -- handle player1 input
-    if love.keyboard.isDown('w') then
+    if
+      love.keyboard.isDown('up') or
+      love.keyboard.isDown('w')
+    then
       paddle1.dy = -PADDLE_SPEED
-    elseif love.keyboard.isDown('s') then
+    elseif
+      love.keyboard.isDown('down') or
+      love.keyboard.isDown('s')
+    then
       paddle1.dy = PADDLE_SPEED
     else
       paddle1.dy = 0
     end
-    -- handle player2 input
-    if love.keyboard.isDown('up') or love.keyboard.isDown('p') then
-      paddle2.dy = -PADDLE_SPEED
-    elseif love.keyboard.isDown('down') or love.keyboard.isDown(';') then
-      paddle2.dy = PADDLE_SPEED
-    else
-      paddle2.dy = 0
+
+    -- add ai logic
+    if
+      ball.dx > 0 and
+      ball.x > 0.4 * VIRTUAL_WIDTH and
+      AI_DECISION_TIMER > 0.3
+    then
+      if ball.y + ball.height < paddle2.y then
+        paddle2.dy = -PADDLE_SPEED_FOR_AI
+      elseif ball.y > paddle2.y + paddle2.height then
+        paddle2.dy = PADDLE_SPEED_FOR_AI
+      else
+        paddle2.dy = 0
+      end
+
+      if AI_DECISION_TIMER > 0.5 then
+        AI_DECISION_TIMER = 0
+      end
     end
   end
 end
